@@ -37,6 +37,7 @@
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <sensor_msgs/msg/joy.hpp>
+#include <std_msgs/msg/u_int8.hpp>
 
 #include "spnav.h" // NOLINT
 
@@ -52,6 +53,7 @@ public:
 
 private:
   void poll_spacenav();
+  void led_callback(const std_msgs::msg::UInt8::SharedPtr led);
 
   OnSetParametersCallbackHandle::SharedPtr callback_handler;
 
@@ -66,6 +68,8 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_twist;
 
   rclcpp::Publisher<sensor_msgs::msg::Joy>::SharedPtr publisher_joy;
+
+  rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr subscription_led;
 
   bool spacenav_is_open = false;
 

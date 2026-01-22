@@ -111,8 +111,9 @@ Spacenav::Spacenav(const rclcpp::NodeOptions & options)
       }
       return result;
     };
-  callback_handler =
-    this->add_on_set_parameters_callback(param_change_callback);
+  callback_handler = this->add_on_set_parameters_callback(param_change_callback);
+
+  subscription_led = this->create_subscription<std_msgs::msg::UInt8>("spacenav/led", 10, std::bind(&Spacenav::led_callback, this, std::placeholders::_1));
 
   // Setup publishers and Timer
   publisher_offset = this->create_publisher<geometry_msgs::msg::Vector3>(
@@ -159,6 +160,10 @@ Spacenav::~Spacenav()
   }
 }
 
+void Spacenav::led_callback(const std_msgs::msg::UInt8::SharedPtr led) {
+  spnav_cfg_set_led(led->data);
+}
+
 void Spacenav::poll_spacenav()
 {
   if (!spacenav_is_open) {
@@ -169,6 +174,7 @@ void Spacenav::poll_spacenav()
         "Did you remember to run spacenavd (as root)?");
       return;
     } else {
+      spnav_evmask(0x021);
       spacenav_is_open = true;
     }
   }
@@ -252,7 +258,7 @@ void Spacenav::poll_spacenav()
         motion_stale = true;
         break;
 
-      case SPNAV_EVENT_BUTTON:
+      case SPNAV_EVENT_RAWBUTTON:
 
         if (sev.button.bnum < 0) {
           RCLCPP_WARN(
@@ -298,6 +304,7 @@ void Spacenav::poll_spacenav()
       if (use_twist_stamped) {
         auto msg_twist_stamped = std::make_unique<geometry_msgs::msg::TwistStamped>();
         msg_twist_stamped->header.stamp = msg_joystick->header.stamp;
+        msg_twist_stamped->header.frame_id = "body_link";
         msg_twist_stamped->twist = *msg_twist;
         publisher_twist_stamped->publish(std::move(msg_twist_stamped));
       } else {
