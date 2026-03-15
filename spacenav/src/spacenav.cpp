@@ -113,7 +113,8 @@ Spacenav::Spacenav(const rclcpp::NodeOptions & options)
     };
   callback_handler = this->add_on_set_parameters_callback(param_change_callback);
 
-  subscription_led = this->create_subscription<std_msgs::msg::UInt8>("spacenav/led", 10, std::bind(&Spacenav::led_callback, this, std::placeholders::_1));
+  led_service = this->create_service<std_srvs::srv::SetBool>("spacenav/led_on", std::bind(&Spacenav::led_callback, this, std::placeholders::_1, std::placeholders::_2));
+  frame_service = this->create_service<spacenav_interfaces::srv::SetFrame>("spacenav/frame", std::bind(&Spacenav::frame_callback, this, std::placeholders::_1));
 
   // Setup publishers and Timer
   publisher_offset = this->create_publisher<geometry_msgs::msg::Vector3>(
@@ -160,8 +161,16 @@ Spacenav::~Spacenav()
   }
 }
 
-void Spacenav::led_callback(const std_msgs::msg::UInt8::SharedPtr led) {
-  spnav_cfg_set_led(led->data);
+void Spacenav::led_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                            std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+{
+  spnav_cfg_set_led(request->data);
+  response->success = spnav_cfg_get_led() == request->data;
+}
+
+void Spacenav::frame_callback(const std::shared_ptr<spacenav_interfaces::srv::SetFrame::Request> request)
+{
+  frame_id = request->frame_id;
 }
 
 void Spacenav::poll_spacenav()
@@ -284,6 +293,18 @@ void Spacenav::poll_spacenav()
     }
 
     if (motion_stale && (queue_empty || joy_stale)) {
+
+      std::vector<double> v{std::abs(normed_vx), std::abs(normed_vy), std::abs(normed_vz), std::abs(normed_wx), std::abs(normed_wy), std::abs(normed_wz)};
+      std::vector<double>::iterator result;
+      result = std::max_element(v.begin(), v.end());
+      int max = std::distance(v.begin(), result);
+      normed_vx = max == 0 ? normed_vx : 0;
+      normed_vy = max == 1 ? normed_vy : 0;
+      normed_vz = max == 2 ? normed_vz : 0;
+      normed_wx = max == 3 ? normed_wx : 0;
+      normed_wy = max == 4 ? normed_wy : 0;
+      normed_wz = max == 5 ? normed_wz : 0;
+
       // The offset and rot_offset are scaled.
       auto msg_offset = std::make_unique<geometry_msgs::msg::Vector3>();
       msg_offset->x = normed_vx * linear_scale[0];
@@ -304,7 +325,7 @@ void Spacenav::poll_spacenav()
       if (use_twist_stamped) {
         auto msg_twist_stamped = std::make_unique<geometry_msgs::msg::TwistStamped>();
         msg_twist_stamped->header.stamp = msg_joystick->header.stamp;
-        msg_twist_stamped->header.frame_id = "body_link";
+        msg_twist_stamped->header.frame_id = frame_id;
         msg_twist_stamped->twist = *msg_twist;
         publisher_twist_stamped->publish(std::move(msg_twist_stamped));
       } else {

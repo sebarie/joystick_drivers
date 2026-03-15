@@ -37,7 +37,8 @@
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <sensor_msgs/msg/joy.hpp>
-#include <std_msgs/msg/u_int8.hpp>
+#include <std_srvs/srv/set_bool.hpp>
+#include <spacenav_interfaces/srv/set_frame.hpp>
 
 #include "spnav.h" // NOLINT
 
@@ -53,7 +54,8 @@ public:
 
 private:
   void poll_spacenav();
-  void led_callback(const std_msgs::msg::UInt8::SharedPtr led);
+  void led_callback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request, std::shared_ptr<std_srvs::srv::SetBool::Response> response);
+  void frame_callback(const std::shared_ptr<spacenav_interfaces::srv::SetFrame::Request> request);
 
   OnSetParametersCallbackHandle::SharedPtr callback_handler;
 
@@ -69,7 +71,8 @@ private:
 
   rclcpp::Publisher<sensor_msgs::msg::Joy>::SharedPtr publisher_joy;
 
-  rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr subscription_led;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr led_service;
+  rclcpp::Service<spacenav_interfaces::srv::SetFrame>::SharedPtr frame_service;
 
   bool spacenav_is_open = false;
 
@@ -82,6 +85,7 @@ private:
   double static_trans_deadband;
   double static_rot_deadband;
   bool use_twist_stamped;
+  std::string frame_id = "base_link";
 
   spnav_event sev;
   bool joy_stale = false;

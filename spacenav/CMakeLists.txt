@@ -17,8 +17,9 @@ find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(SPNAV REQUIRED)
+find_package(spacenav_interfaces REQUIRED)
 
 add_library(spacenav
   SHARED
@@ -33,7 +34,8 @@ target_link_libraries(spacenav PUBLIC
   ${geometry_msgs_TARGETS}
   rclcpp::rclcpp
   ${sensor_msgs_TARGETS}
-  ${std_msgs_TARGETS}
+  ${std_srvs_TARGETS}
+  ${spacenav_interfaces_TARGETS}
   spnav
 )
 
